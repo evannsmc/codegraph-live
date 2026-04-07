@@ -414,8 +414,8 @@ program
  * codegraph index [path]
  */
 program
-  .command('index [path]')
-  .description('Index all files in the project')
+  .command('reindex [path]')
+  .description('Fully re-index all files in the project (rebuilds graph from scratch)')
   .option('-f, --force', 'Force full re-index even if already indexed')
   .option('-q, --quiet', 'Suppress progress output')
   .option('-v, --verbose', 'Show detailed worker lifecycle and memory info')
@@ -922,8 +922,8 @@ function printFileTree(
  * codegraph context <task>
  */
 program
-  .command('context <task>')
-  .description('Build context for a task (outputs markdown)')
+  .command('explain <task>')
+  .description('Build rich context for a task — semantically finds relevant symbols, call graphs, and code (outputs markdown)')
   .option('-p, --path <path>', 'Project path')
   .option('-n, --max-nodes <number>', 'Maximum nodes to include', '50')
   .option('-c, --max-code <number>', 'Maximum code blocks', '10')
@@ -969,7 +969,7 @@ program
  */
 program
   .command('serve')
-  .description('Start CodeGraph as an MCP server for AI assistants')
+  .description('[Internal] Start the MCP server — Claude Code manages this automatically, you do not need to run it manually')
   .option('-p, --path <path>', 'Project path (optional for MCP mode, uses rootUri from client)')
   .option('--mcp', 'Run as MCP server (stdio transport)')
   .action(async (options: { path?: string; mcp?: boolean }) => {
@@ -1086,7 +1086,7 @@ program
  */
 program
   .command('mark-dirty [path]')
-  .description('Mark project as needing sync (used by Claude Code hooks)')
+  .description('[Internal] Write a dirty sentinel file — called automatically by Claude Code\'s PostToolUse hook, not intended for manual use')
   .action(async (pathArg: string | undefined) => {
     try {
       const startPath = path.resolve(pathArg || process.cwd());
@@ -1116,7 +1116,7 @@ program
  */
 program
   .command('sync-if-dirty [path]')
-  .description('Sync if project was marked dirty (used by Claude Code hooks)')
+  .description('[Internal] Trigger a background sync if the dirty sentinel exists — called automatically by Claude Code\'s Stop hook, not intended for manual use')
   .action(async (pathArg: string | undefined) => {
     try {
       const startPath = path.resolve(pathArg || process.cwd());
@@ -1200,8 +1200,8 @@ program
  *   codegraph affected src/lib/components/Editor.svelte src/routes/+page.svelte
  */
 program
-  .command('affected [files...]')
-  .description('Find test files affected by changed source files')
+  .command('test-changes [files...]')
+  .description('Find test files that cover the given source files (reverse graph traversal — useful in CI or pre-commit hooks)')
   .option('-p, --path <path>', 'Project path')
   .option('--stdin', 'Read file list from stdin (one per line)')
   .option('-d, --depth <number>', 'Max dependency traversal depth', '5')

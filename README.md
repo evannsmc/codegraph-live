@@ -128,26 +128,36 @@ codegraph-live uninit [path]        # Remove CodeGraph from a project (deletes .
 ### Indexing & sync
 
 ```bash
-codegraph-live index [path]         # Full re-index of all files
-codegraph-live sync [path]          # Incremental sync (changed files only)
+codegraph-live reindex [path]       # Fully rebuild the graph from scratch (all files)
+codegraph-live sync [path]          # Incremental sync — re-index only files that changed
 codegraph-live status [path]        # Show index stats (file count, nodes, DB size, last sync)
 ```
 
-> With the daemon running, you rarely need `sync` manually — it runs automatically on every file change.
+> With the daemon running, you rarely need either manually — the daemon syncs on every file save automatically.
 
 ### Querying
 
 ```bash
-codegraph-live query <search>       # Search for symbols by name
-codegraph-live files [path]         # Show project file structure
-codegraph-live context <task>       # Build context for an AI task (semantic + graph)
-codegraph-live affected [files...]  # Find test files affected by changed source files (git-diff aware)
+codegraph-live query <search>       # Search for symbols by name (functions, classes, types)
+codegraph-live files [path]         # Show project file structure as known to the graph
+codegraph-live explain <task>       # Build rich context for a task — finds relevant symbols,
+                                    #   call graphs, and code semantically (outputs markdown)
+codegraph-live test-changes [files...]  # Find test files that cover the given source files
+                                        #   (reverse graph traversal — useful in CI/pre-commit)
 ```
 
-### MCP server (Claude Code integration)
+**`test-changes` example:**
+```bash
+# After editing a planning module, find which tests cover it:
+git diff --name-only HEAD~1 | xargs codegraph-live test-changes
+```
+
+### MCP server & internal commands
 
 ```bash
-codegraph-live serve --mcp          # Start MCP server (Claude Code manages this automatically)
+codegraph-live serve --mcp          # [Internal] Claude Code starts this automatically — you never run it directly
+codegraph-live mark-dirty [path]    # [Internal] Called by Claude Code's PostToolUse hook
+codegraph-live sync-if-dirty [path] # [Internal] Called by Claude Code's Stop hook
 ```
 
 MCP tools available inside Claude Code sessions:
@@ -174,12 +184,6 @@ codegraph-live daemon install-service   # Write + enable ~/.config/systemd/user/
 codegraph-live daemon uninstall-service # Disable and remove the systemd service
 ```
 
-### Hook helpers (used internally by Claude Code hooks — not typically run manually)
-
-```bash
-codegraph-live mark-dirty [path]        # Write .codegraph/.dirty sentinel file
-codegraph-live sync-if-dirty [path]     # Sync if sentinel exists, then remove it
-```
 
 ---
 
