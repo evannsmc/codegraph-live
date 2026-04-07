@@ -1,5 +1,5 @@
 {
-  "name": "codegraph-live",
+  "name": "@evannsmc/codegraph-live",
   "version": "0.6.9-live.1",
   "description": "codegraph fork with an always-on filesystem watcher daemon — graph stays fresh even when Claude Code is closed.",
   "main": "dist/index.js",

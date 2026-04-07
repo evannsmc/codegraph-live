@@ -51,7 +51,21 @@ This means edits you make yourself — in VS Code, vim, or anywhere outside Clau
 
 ## Installation
 
-### 1. Clone and install globally
+### 1. Install
+
+**Via npm (recommended):**
+
+```bash
+npm install -g @evannsmc/codegraph-live
+```
+
+**Or via npx (no global install):**
+
+```bash
+npx @evannsmc/codegraph-live
+```
+
+**From source:**
 
 ```bash
 git clone git@github.com:evannsmc/codegraph-live.git
