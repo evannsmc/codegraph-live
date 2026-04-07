@@ -114,16 +114,80 @@ The daemon coexists safely with the MCP server and any CLI `sync` calls via code
 
 ---
 
-## All original codegraph features
+## Full CLI reference
 
-Everything from upstream is preserved. See the [upstream README](https://github.com/colbymchenry/codegraph) for full documentation on:
+All upstream commands are available under the `codegraph-live` binary.
 
-- Semantic search + call graph traversal via MCP tools
-- `codegraph_explore`, `codegraph_context`, `codegraph_search`, `codegraph_callers`, `codegraph_impact`
-- `codegraph-live affected` — git-diff-aware test selection for CI
-- 19 supported languages (TypeScript, Python, Go, Rust, Java, C/C++, C#, Swift, Kotlin, and more)
-- Local embeddings via `@xenova/transformers` (no API key needed)
-- Interactive installer with Claude Code MCP + hook configuration
+### Project setup
+
+```bash
+codegraph-live                      # Run interactive installer (no args)
+codegraph-live install              # Run interactive installer (configures MCP, hooks, CLAUDE.md)
+codegraph-live init [path]          # Initialize CodeGraph in a project (non-interactive)
+codegraph-live uninit [path]        # Remove CodeGraph from a project
+```
+
+### Indexing & sync
+
+```bash
+codegraph-live index [path]         # Full re-index of all files
+codegraph-live sync [path]          # Incremental sync (changed files only)
+codegraph-live status [path]        # Show index stats (file count, nodes, DB size, last sync)
+```
+
+> With the daemon running, you rarely need `sync` manually — it runs automatically on every file change.
+
+### Querying
+
+```bash
+codegraph-live query <search>       # Search for symbols by name
+codegraph-live files [path]         # Show project file structure
+codegraph-live context <task>       # Build context for an AI task (semantic + graph)
+codegraph-live affected [files...]  # Find test files affected by changed source files (git-diff aware)
+```
+
+### MCP server (Claude Code integration)
+
+```bash
+codegraph-live serve --mcp          # Start MCP server (Claude Code manages this automatically)
+```
+
+MCP tools available inside Claude Code sessions:
+
+| Tool | Purpose |
+|---|---|
+| `codegraph_explore` | Deep exploration — comprehensive context for a topic in one call |
+| `codegraph_context` | Quick context for a task |
+| `codegraph_search` | Find symbols by name (functions, classes, types) |
+| `codegraph_callers` | Find what calls a function |
+| `codegraph_callees` | Find what a function calls |
+| `codegraph_impact` | Find what's affected by changing a symbol |
+| `codegraph_node` | Get details + source for a specific symbol |
+
+### Daemon (new in this fork)
+
+```bash
+codegraph-live daemon start             # Start daemon manually (detached background process)
+codegraph-live daemon stop              # Stop the running daemon
+codegraph-live daemon restart           # Restart the daemon
+codegraph-live daemon status            # Show PID, running state, and list of watched projects
+
+codegraph-live daemon install-service   # Write + enable ~/.config/systemd/user/codegraph-live.service
+codegraph-live daemon uninstall-service # Disable and remove the systemd service
+```
+
+### Hook helpers (used internally by Claude Code hooks — not typically run manually)
+
+```bash
+codegraph-live mark-dirty [path]        # Write .codegraph/.dirty sentinel file
+codegraph-live sync-if-dirty [path]     # Sync if sentinel exists, then remove it
+```
+
+---
+
+## Supported languages
+
+TypeScript, JavaScript, TSX, JSX, Python, Go, Rust, Java, C, C++, C#, PHP, Ruby, Swift, Kotlin, Dart, Liquid, Pascal (19 total)
 
 ---
 
