@@ -140,6 +140,13 @@ codegraph-live daemon restart
 
 ---
 
+## Credits
+
+- **[colbymchenry/codegraph](https://github.com/colbymchenry/codegraph)** — the upstream project this fork is based on. All core graph indexing, MCP tools, semantic search, and Claude Code integration come from there.
+- **[sdsrss/code-graph-mcp](https://github.com/sdsrss/code-graph-mcp)** — inspiration for the always-on daemon architecture. That project's persistent filesystem watcher (implemented in Rust) demonstrated that keeping the graph live between sessions is both practical and valuable. The daemon in this fork applies the same idea to the codegraph TypeScript ecosystem.
+
+---
+
 ## License
 
 MIT — same as upstream. Fork by [evannsmc](https://github.com/evannsmc).
