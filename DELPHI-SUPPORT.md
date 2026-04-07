@@ -125,33 +125,34 @@ Verify with:
 codegraph --version
 ```
 
-### 3. Index a Delphi project
+### 3. Set up the MCP server (global — one time per machine)
+
+```bash
+codegraph-live install
+```
+
+This writes `~/.claude/CLAUDE.md`, `~/.claude.json` MCP config, and `~/.claude/settings.json` permissions and hooks. Run once; applies to all projects.
+
+### 4. Index a Delphi project
 
 ```bash
 cd /path/to/your/delphi-project
-codegraph init -i
-codegraph index
+codegraph-live init
 ```
 
-### 4. Query the code graph
+This writes local `.claude.json`/hooks and indexes the codebase. After that, start Claude Code in the project — CodeGraph tools will be available immediately.
+
+### 5. Query the code graph
 
 ```bash
-codegraph status                          # Show index statistics
-codegraph query "TFormMain"               # Search for a symbol
-codegraph context "What does TCustomer do?"  # Build AI context
+codegraph-live status                              # Show index statistics
+codegraph-live query "TFormMain"                   # Search for a symbol
+codegraph-live explain "What does TCustomer do?"   # Build AI context
 ```
-
-### 5. Set up the MCP server (for Claude Code)
-
-```bash
-codegraph install
-```
-
-This configures the MCP server, tool permissions, auto-sync hooks, and CLAUDE.md in one step. After that, start Claude Code in the project — CodeGraph tools will be available immediately.
 
 ### 6. Clean up
 
 ```bash
-npm unlink -g @colbymchenry/codegraph       # Remove global link
-rm -rf /path/to/delphi-project/.codegraph   # Remove project index
+npm uninstall -g codegraph-live                    # Remove global install
+rm -rf /path/to/delphi-project/.codegraph          # Remove project index
 ```

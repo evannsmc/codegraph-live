@@ -69,16 +69,29 @@ codegraph-live daemon install-service
 
 This writes `~/.config/systemd/user/codegraph-live.service` and enables it immediately. The daemon will start automatically at every login from now on.
 
-### 3. Initialize a project
+### 3. Run the global installer
 
-Inside any project you want to track:
+```bash
+codegraph-live install
+```
+
+This is a one-time setup that writes to your **global** `~/.claude/` directory:
+- `~/.claude/CLAUDE.md` — CodeGraph usage instructions (applied in every project)
+- `~/.claude.json` — MCP server registration
+- `~/.claude/settings.json` — tool permissions and auto-sync hooks
+
+You only need to run this once per machine. It will also offer to initialize the current directory as a project.
+
+### 4. Initialize each project
+
+Inside each project you want to track:
 
 ```bash
 cd ~/your-project
 codegraph-live init
 ```
 
-The interactive installer configures Claude Code's MCP server, hooks, and CLAUDE.md instructions. The daemon picks up the new project within 30 seconds — no restart needed.
+This writes **project-local** config (`.claude.json`, `.claude/settings.json`) and indexes the codebase. The daemon picks up the new project within 30 seconds — no restart needed.
 
 ---
 
@@ -118,10 +131,12 @@ The daemon coexists safely with the MCP server and any CLI `sync` calls via code
 
 All upstream commands are available under the `codegraph-live` binary.
 
-### Project setup
+### Setup
 
 ```bash
-codegraph-live init                 # Initialize current project: index code + wire up Claude Code MCP/hooks
+codegraph-live install              # One-time global setup: writes ~/.claude/CLAUDE.md + MCP config
+                                    # Run once per machine; also offered on bare `codegraph-live` invocation
+codegraph-live init [path]          # Per-project: indexes code + writes local .claude.json/hooks
 codegraph-live uninit [path]        # Remove CodeGraph from a project (deletes .codegraph/)
 ```
 
