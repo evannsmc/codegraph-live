@@ -103,7 +103,7 @@ function writeJsonFile(filePath: string, data: Record<string, any>): void {
 function getMcpServerConfig(): Record<string, any> {
   return {
     type: 'stdio',
-    command: 'codegraph',
+    command: 'codegraph-live',
     args: ['serve', '--mcp'],
   };
 }
