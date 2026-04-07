@@ -203,7 +203,7 @@ export function hasPermissions(location: InstallLocation): boolean {
  * Stop → sync-if-dirty (sync, ensures fresh index before next user turn)
  */
 function getHooksConfig(): Record<string, any> {
-  const command = 'codegraph';
+  const command = 'codegraph-live';
 
   return {
     PostToolUse: [
@@ -243,7 +243,7 @@ export function hasHooks(location: InstallLocation): boolean {
 
   // Check if any hook command references codegraph
   const json = JSON.stringify(hooks);
-  return json.includes('codegraph mark-dirty') || json.includes('codegraph sync-if-dirty');
+  return json.includes('codegraph-live mark-dirty') || json.includes('codegraph-live sync-if-dirty');
 }
 
 /**
@@ -270,7 +270,7 @@ export function writeHooks(location: InstallLocation): void {
     settings.hooks[event] = (settings.hooks[event] as any[]).filter((entry: any) => {
       // Keep entries that don't reference codegraph
       const entryJson = JSON.stringify(entry);
-      return !entryJson.includes('codegraph mark-dirty') && !entryJson.includes('codegraph sync-if-dirty');
+      return !entryJson.includes('codegraph-live mark-dirty') && !entryJson.includes('codegraph-live sync-if-dirty');
     });
 
     // Add new codegraph entries

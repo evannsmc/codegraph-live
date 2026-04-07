@@ -992,7 +992,7 @@ program
 {
   "mcpServers": {
     "codegraph": {
-      "command": "codegraph",
+      "command": "codegraph-live",
       "args": ["serve", "--mcp"]
     }
   }
