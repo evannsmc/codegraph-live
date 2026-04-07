@@ -75,7 +75,7 @@ Inside any project you want to track:
 
 ```bash
 cd ~/your-project
-codegraph-live install
+codegraph-live init
 ```
 
 The interactive installer configures Claude Code's MCP server, hooks, and CLAUDE.md instructions. The daemon picks up the new project within 30 seconds — no restart needed.
@@ -121,10 +121,8 @@ All upstream commands are available under the `codegraph-live` binary.
 ### Project setup
 
 ```bash
-codegraph-live                      # Run interactive installer (no args)
-codegraph-live install              # Run interactive installer (configures MCP, hooks, CLAUDE.md)
-codegraph-live init [path]          # Initialize CodeGraph in a project (non-interactive)
-codegraph-live uninit [path]        # Remove CodeGraph from a project
+codegraph-live init                 # Initialize current project: index code + wire up Claude Code MCP/hooks
+codegraph-live uninit [path]        # Remove CodeGraph from a project (deletes .codegraph/)
 ```
 
 ### Indexing & sync

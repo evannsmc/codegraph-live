@@ -50,14 +50,9 @@ async function loadCodeGraph(): Promise<typeof import('../index')> {
 const importESM = new Function('specifier', 'return import(specifier)') as
   (specifier: string) => Promise<typeof import('@clack/prompts')>;
 
-// Check if running with no arguments - run installer
+// No arguments: show help (user should run `codegraph-live init` explicitly)
 if (process.argv.length === 2) {
-  import('../installer').then(({ runInstaller }) =>
-    runInstaller()
-  ).catch((err) => {
-    console.error('Installation failed:', err instanceof Error ? err.message : String(err));
-    process.exit(1);
-  });
+  process.argv.push('--help');
 } else {
   // Normal CLI flow
   main();
@@ -358,59 +353,16 @@ function writeErrorLog(projectPath: string, errors: Array<{ message: string; fil
 // =============================================================================
 
 /**
- * codegraph init [path]
+ * codegraph-live init
+ * Sets up the current project: writes local Claude Code config (MCP, hooks)
+ * and indexes the codebase. Replaces the old bare `init` and `install` commands.
  */
 program
-  .command('init [path]')
-  .description('Initialize CodeGraph in a project directory')
-  .option('-i, --index', 'Run initial indexing after initialization')
-  .option('-v, --verbose', 'Show detailed worker lifecycle and memory info')
-  .action(async (pathArg: string | undefined, options: { index?: boolean; verbose?: boolean }) => {
-    const projectPath = path.resolve(pathArg || process.cwd());
-    const clack = await importESM('@clack/prompts');
-
-    clack.intro('Initializing CodeGraph');
-
-    try {
-      if (isInitialized(projectPath)) {
-        clack.log.warn(`Already initialized in ${projectPath}`);
-        clack.log.info('Use "codegraph index" to re-index or "codegraph sync" to update');
-        clack.outro('');
-        return;
-      }
-
-      const { default: CodeGraph } = await loadCodeGraph();
-      const cg = await CodeGraph.init(projectPath, { index: false });
-      clack.log.success(`Initialized in ${projectPath}`);
-
-      if (options.index) {
-        let result: IndexResult;
-
-        if (options.verbose) {
-          result = await cg.indexAll({
-            onProgress: createVerboseProgress(),
-            verbose: true,
-          });
-        } else {
-          process.stdout.write(`${colors.dim}│${colors.reset}\n`);
-          const progress = createShimmerProgress();
-          result = await cg.indexAll({
-            onProgress: progress.onProgress,
-          });
-          await progress.stop();
-        }
-
-        printIndexResult(clack, result, projectPath);
-      } else {
-        clack.log.info('Run "codegraph index" to index the project');
-      }
-
-      clack.outro('Done');
-      cg.destroy();
-    } catch (err) {
-      clack.log.error(`Failed: ${err instanceof Error ? err.message : String(err)}`);
-      process.exit(1);
-    }
+  .command('init')
+  .description('Initialize CodeGraph Live in the current project (indexes code + wires up Claude Code MCP)')
+  .action(async () => {
+    const { runInstaller } = await import('../installer');
+    await runInstaller();
   });
 
 /**
@@ -1375,16 +1327,6 @@ program
     }
   });
 
-/**
- * codegraph install
- */
-program
-  .command('install')
-  .description('Run interactive installer for Claude Code integration')
-  .action(async () => {
-    const { runInstaller } = await import('../installer');
-    await runInstaller();
-  });
 
 // =============================================================================
 // codegraph-live daemon commands

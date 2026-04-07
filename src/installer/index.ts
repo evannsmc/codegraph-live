@@ -10,8 +10,8 @@ import {
   writeMcpConfig, writePermissions, writeClaudeMd, writeHooks,
   hasMcpConfig, hasPermissions, hasHooks,
 } from './config-writer';
-
 import type { InstallLocation } from './config-writer';
+
 
 // Dynamic import helper — tsc compiles import() to require() in CJS mode,
 // which fails for ESM-only packages. This bypasses the transformation.
@@ -40,56 +40,23 @@ function getVersion(): string {
 }
 
 /**
- * Run the interactive installer
+ * Run the interactive setup for the current project.
+ * Always writes local config (./.claude/) since the user ran this
+ * from inside the project they want to initialize.
  */
 export async function runInstaller(): Promise<void> {
   const clack = await importESM('@clack/prompts');
 
   clack.intro(`CodeGraph Live v${getVersion()}`);
+  clack.log.info(`Setting up ${process.cwd()}`);
 
-  // Step 1: Installation location
-  const location = await clack.select({
-    message: 'Where would you like to install?',
-    options: [
-      { value: 'global' as const, label: 'Global', hint: '~/.claude — available in all projects' },
-      { value: 'local' as const, label: 'Local', hint: './.claude — this project only' },
-    ],
-    initialValue: 'global' as const,
-  });
+  // Write local Claude Code config (MCP server, hooks, permissions, CLAUDE.md)
+  writeConfigs(clack, 'local', true);
 
-  if (clack.isCancel(location)) {
-    clack.cancel('Installation cancelled.');
-    process.exit(0);
-  }
+  // Index the project
+  await initializeLocalProject(clack);
 
-  // Step 3: Auto-allow permissions
-  const autoAllow = await clack.confirm({
-    message: 'Auto-allow CodeGraph Live commands? (Skips permission prompts)',
-    initialValue: true,
-  });
-
-  if (clack.isCancel(autoAllow)) {
-    clack.cancel('Installation cancelled.');
-    process.exit(0);
-  }
-
-  // Step 4: Write configuration files
-  writeConfigs(clack, location, autoAllow);
-
-  // Step 5: For local install, initialize the project
-  if (location === 'local') {
-    await initializeLocalProject(clack);
-  }
-
-  // Done
-  if (location === 'global') {
-    clack.note(
-      'cd your-project\ncodegraph-live install',
-      'Quick start',
-    );
-  }
-
-  clack.outro('Done! Restart Claude Code to use CodeGraph Live.');
+  clack.outro('Done! Restart Claude Code to activate the graph.');
 }
 
 /**
