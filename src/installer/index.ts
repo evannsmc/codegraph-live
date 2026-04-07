@@ -4,7 +4,6 @@
  * Uses @clack/prompts for a polished interactive CLI experience.
  */
 
-import { execSync } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 import {
@@ -46,34 +45,9 @@ function getVersion(): string {
 export async function runInstaller(): Promise<void> {
   const clack = await importESM('@clack/prompts');
 
-  clack.intro(`CodeGraph v${getVersion()}`);
+  clack.intro(`CodeGraph Live v${getVersion()}`);
 
-  // Step 1: Install globally
-  const shouldInstallGlobally = await clack.confirm({
-    message: 'Install codegraph globally? (Required for hooks & MCP server)',
-    initialValue: true,
-  });
-
-  if (clack.isCancel(shouldInstallGlobally)) {
-    clack.cancel('Installation cancelled.');
-    process.exit(0);
-  }
-
-  if (shouldInstallGlobally) {
-    const s = clack.spinner();
-    s.start('Installing codegraph globally...');
-    try {
-      execSync('npm install -g @colbymchenry/codegraph', { stdio: 'pipe' });
-      s.stop('Installed codegraph globally');
-    } catch {
-      s.stop('Could not install globally (permission denied)');
-      clack.log.warn('Try: sudo npm install -g @colbymchenry/codegraph');
-    }
-  } else {
-    clack.log.info('Skipped global install — hooks and MCP server may not work without it');
-  }
-
-  // Step 2: Installation location
+  // Step 1: Installation location
   const location = await clack.select({
     message: 'Where would you like to install?',
     options: [
@@ -90,7 +64,7 @@ export async function runInstaller(): Promise<void> {
 
   // Step 3: Auto-allow permissions
   const autoAllow = await clack.confirm({
-    message: 'Auto-allow CodeGraph commands? (Skips permission prompts)',
+    message: 'Auto-allow CodeGraph Live commands? (Skips permission prompts)',
     initialValue: true,
   });
 
@@ -110,12 +84,12 @@ export async function runInstaller(): Promise<void> {
   // Done
   if (location === 'global') {
     clack.note(
-      'cd your-project\ncodegraph init -i',
+      'cd your-project\ncodegraph-live install',
       'Quick start',
     );
   }
 
-  clack.outro('Done! Restart Claude Code to use CodeGraph.');
+  clack.outro('Done! Restart Claude Code to use CodeGraph Live.');
 }
 
 /**
@@ -153,7 +127,7 @@ function writeConfigs(
   } else if (claudeMdResult.updated) {
     clack.log.success(`Updated ${claudeMdPath}`);
   } else {
-    clack.log.success(`Added CodeGraph instructions to ${claudeMdPath}`);
+    clack.log.success(`Added CodeGraph Live instructions to ${claudeMdPath}`);
   }
 }
 
