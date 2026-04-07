@@ -35,8 +35,8 @@ const projectSubs = new Map<string, { unsubscribe: () => Promise<void> }>();
 // ---------------------------------------------------------------------------
 
 async function syncProject(projectRoot: string): Promise<void> {
-  // Lazy-load to keep startup fast
-  const { CodeGraph } = await import('../index');
+  // Lazy-load to keep startup fast. Use default export consistent with the rest of the CLI.
+  const { default: CodeGraph } = await import('../index');
   let cg: CodeGraph | null = null;
   try {
     cg = await CodeGraph.open(projectRoot);

@@ -233,6 +233,20 @@ function getHooksConfig(): Record<string, any> {
 }
 
 /**
+ * Return true if a serialized hook entry belongs to any CodeGraph variant.
+ * Covers both the current binary name (codegraph-live) and the pre-rename
+ * name (codegraph) so that upgrade installs clean up legacy entries.
+ */
+function isCodeGraphHookEntry(entryJson: string): boolean {
+  return (
+    entryJson.includes('codegraph-live mark-dirty') ||
+    entryJson.includes('codegraph-live sync-if-dirty') ||
+    entryJson.includes('"codegraph mark-dirty"') ||
+    entryJson.includes('"codegraph sync-if-dirty"')
+  );
+}
+
+/**
  * Check if Claude Code hooks already exist for CodeGraph
  */
 export function hasHooks(location: InstallLocation): boolean {
@@ -241,14 +255,14 @@ export function hasHooks(location: InstallLocation): boolean {
   const hooks = settings.hooks;
   if (!hooks) return false;
 
-  // Check if any hook command references codegraph
   const json = JSON.stringify(hooks);
-  return json.includes('codegraph-live mark-dirty') || json.includes('codegraph-live sync-if-dirty');
+  return isCodeGraphHookEntry(json);
 }
 
 /**
  * Write Claude Code hooks to settings.json for auto-sync.
- * Merges with existing hooks, deduplicating any previous codegraph entries.
+ * Merges with existing hooks, removing both current and legacy hook entries
+ * to prevent duplicates or broken commands after a binary rename upgrade.
  */
 export function writeHooks(location: InstallLocation): void {
   const settingsPath = getSettingsJsonPath(location);
@@ -266,14 +280,12 @@ export function writeHooks(location: InstallLocation): void {
       settings.hooks[event] = [];
     }
 
-    // Remove any existing codegraph entries for this event
+    // Remove any existing CodeGraph hook entries (current AND legacy names)
     settings.hooks[event] = (settings.hooks[event] as any[]).filter((entry: any) => {
-      // Keep entries that don't reference codegraph
-      const entryJson = JSON.stringify(entry);
-      return !entryJson.includes('codegraph-live mark-dirty') && !entryJson.includes('codegraph-live sync-if-dirty');
+      return !isCodeGraphHookEntry(JSON.stringify(entry));
     });
 
-    // Add new codegraph entries
+    // Add new codegraph-live entries
     settings.hooks[event].push(...(newEntries as any[]));
   }
 
