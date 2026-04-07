@@ -1386,6 +1386,197 @@ program
     await runInstaller();
   });
 
+// =============================================================================
+// codegraph-live daemon commands
+// =============================================================================
+
+const daemonCmd = program
+  .command('daemon')
+  .description('Manage the codegraph-live background sync daemon');
+
+daemonCmd
+  .command('start')
+  .description('Start the daemon (no-op if already running)')
+  .action(async () => {
+    const { isDaemonRunning, readPid } = await import('../daemon/pid');
+    const { ensureDataDir, getDataDir } = await import('../daemon/logger');
+    ensureDataDir();
+
+    if (isDaemonRunning()) {
+      info(`Daemon already running (PID ${readPid()})`);
+      return;
+    }
+
+    const daemonBin = path.join(__dirname, 'daemon.js');
+    const child = spawn(process.execPath, [daemonBin], {
+      detached: true,
+      stdio: 'ignore',
+    });
+    child.unref();
+
+    // Give it a moment to write its PID file
+    await new Promise(r => setTimeout(r, 500));
+
+    if (isDaemonRunning()) {
+      success(`Daemon started (PID ${readPid()})`);
+    } else {
+      error('Daemon failed to start — check the log:');
+      info(`  ${path.join(getDataDir(), 'daemon.log')}`);
+      process.exit(1);
+    }
+  });
+
+daemonCmd
+  .command('stop')
+  .description('Stop the running daemon')
+  .action(async () => {
+    const { isDaemonRunning, readPid, clearPid } = await import('../daemon/pid');
+
+    if (!isDaemonRunning()) {
+      info('Daemon is not running');
+      return;
+    }
+
+    const pid = readPid()!;
+    try {
+      process.kill(pid, 'SIGTERM');
+      success(`Daemon stopped (was PID ${pid})`);
+      clearPid();
+    } catch (err) {
+      error(`Failed to stop daemon: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(1);
+    }
+  });
+
+daemonCmd
+  .command('status')
+  .description('Show daemon status and watched projects')
+  .action(async () => {
+    const { isDaemonRunning, readPid } = await import('../daemon/pid');
+    const { getDataDir } = await import('../daemon/logger');
+    const { scanForProjects } = await import('../daemon/discovery');
+    const os = await import('os');
+
+    if (isDaemonRunning()) {
+      success(`Daemon running (PID ${readPid()})`);
+    } else {
+      warn('Daemon is not running');
+    }
+
+    const projects = scanForProjects(os.homedir());
+    if (projects.length === 0) {
+      info('No codegraph-initialized projects found in $HOME');
+      info('Run `codegraph-live install` inside a project to initialize it');
+    } else {
+      info(`${projects.length} project(s) ${isDaemonRunning() ? 'being watched' : 'found (daemon not running)'}:`);
+      for (const p of projects) {
+        console.log(`  ${chalk.cyan('•')} ${p}`);
+      }
+    }
+
+    info(`Log: ${path.join(getDataDir(), 'daemon.log')}`);
+  });
+
+daemonCmd
+  .command('restart')
+  .description('Restart the daemon')
+  .action(async () => {
+    const { isDaemonRunning, readPid, clearPid } = await import('../daemon/pid');
+    const { ensureDataDir } = await import('../daemon/logger');
+    ensureDataDir();
+
+    if (isDaemonRunning()) {
+      const pid = readPid()!;
+      process.kill(pid, 'SIGTERM');
+      await new Promise(r => setTimeout(r, 500));
+      clearPid();
+    }
+
+    const daemonBin = path.join(__dirname, 'daemon.js');
+    const child = spawn(process.execPath, [daemonBin], {
+      detached: true,
+      stdio: 'ignore',
+    });
+    child.unref();
+
+    await new Promise(r => setTimeout(r, 500));
+
+    if (isDaemonRunning()) {
+      success(`Daemon restarted (PID ${readPid()})`);
+    } else {
+      error('Daemon failed to restart');
+      process.exit(1);
+    }
+  });
+
+daemonCmd
+  .command('install-service')
+  .description('Install systemd user service so the daemon starts at login')
+  .action(async () => {
+    const os = await import('os');
+    const { execFileSync } = await import('child_process');
+    const systemdDir = path.join(os.homedir(), '.config', 'systemd', 'user');
+    const serviceFile = path.join(systemdDir, 'codegraph-live.service');
+    const daemonBin = path.join(__dirname, 'daemon.js');
+
+    fs.mkdirSync(systemdDir, { recursive: true });
+
+    const unit = [
+      '[Unit]',
+      'Description=codegraph-live — always-on code graph sync daemon',
+      'After=default.target',
+      '',
+      '[Service]',
+      'Type=simple',
+      `ExecStart=${process.execPath} ${daemonBin}`,
+      'Restart=on-failure',
+      'RestartSec=5',
+      '',
+      '[Install]',
+      'WantedBy=default.target',
+    ].join('\n') + '\n';
+
+    fs.writeFileSync(serviceFile, unit, 'utf-8');
+    success(`Service file written: ${serviceFile}`);
+
+    try {
+      execFileSync('systemctl', ['--user', 'daemon-reload'], { stdio: 'inherit' });
+      execFileSync('systemctl', ['--user', 'enable', '--now', 'codegraph-live'], { stdio: 'inherit' });
+      success('Service enabled and started');
+      info('The daemon will now start automatically at every login');
+    } catch {
+      warn('Could not enable service automatically. Run manually:');
+      console.log('  systemctl --user daemon-reload');
+      console.log('  systemctl --user enable --now codegraph-live');
+    }
+  });
+
+daemonCmd
+  .command('uninstall-service')
+  .description('Remove the systemd user service')
+  .action(async () => {
+    const os = await import('os');
+    const { execFileSync } = await import('child_process');
+    const serviceFile = path.join(os.homedir(), '.config', 'systemd', 'user', 'codegraph-live.service');
+
+    try {
+      execFileSync('systemctl', ['--user', 'disable', '--now', 'codegraph-live'], { stdio: 'inherit' });
+    } catch {
+      // service may not exist yet
+    }
+
+    try {
+      fs.unlinkSync(serviceFile);
+      success(`Removed ${serviceFile}`);
+    } catch {
+      warn('Service file not found — nothing to remove');
+    }
+
+    try {
+      execFileSync('systemctl', ['--user', 'daemon-reload'], { stdio: 'inherit' });
+    } catch {}
+  });
+
 // Parse and run
 program.parse();
 
