@@ -50,9 +50,12 @@ async function loadCodeGraph(): Promise<typeof import('../index')> {
 const importESM = new Function('specifier', 'return import(specifier)') as
   (specifier: string) => Promise<typeof import('@clack/prompts')>;
 
-// No arguments: show help (user should run `codegraph-live init` explicitly)
+// No arguments: run global installer (like upstream `codegraph` bare invocation)
 if (process.argv.length === 2) {
-  process.argv.push('--help');
+  (async () => {
+    const { runGlobalInstaller } = await import('../installer');
+    await runGlobalInstaller();
+  })();
 } else {
   // Normal CLI flow
   main();
@@ -353,16 +356,31 @@ function writeErrorLog(projectPath: string, errors: Array<{ message: string; fil
 // =============================================================================
 
 /**
- * codegraph-live init
- * Sets up the current project: writes local Claude Code config (MCP, hooks)
- * and indexes the codebase. Replaces the old bare `init` and `install` commands.
+ * codegraph-live install
+ * One-time global setup: writes ~/.claude/CLAUDE.md, ~/.claude.json MCP config,
+ * ~/.claude/settings.json permissions/hooks. Optionally inits current project.
+ * Same as running `codegraph-live` with no arguments.
  */
 program
-  .command('init')
-  .description('Initialize CodeGraph Live in the current project (indexes code + wires up Claude Code MCP)')
+  .command('install')
+  .description('Run the global Claude Code installer (writes ~/.claude/CLAUDE.md + MCP config)')
   .action(async () => {
-    const { runInstaller } = await import('../installer');
-    await runInstaller();
+    const { runGlobalInstaller } = await import('../installer');
+    await runGlobalInstaller();
+  });
+
+/**
+ * codegraph-live init [path]
+ * Per-project setup: writes local .claude.json MCP config + hooks, indexes codebase.
+ * Run `codegraph-live install` first to set up global ~/.claude/CLAUDE.md.
+ */
+program
+  .command('init [path]')
+  .description('Initialize CodeGraph in a project (local MCP config + index). Run `install` first for global setup.')
+  .action(async (pathArg?: string) => {
+    const projectPath = path.resolve(pathArg || process.cwd());
+    const { runProjectInit } = await import('../installer');
+    await runProjectInit(projectPath);
   });
 
 /**

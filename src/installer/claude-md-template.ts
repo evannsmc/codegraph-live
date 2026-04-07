@@ -40,5 +40,5 @@ CodeGraph builds a semantic knowledge graph of codebases for faster, smarter cod
 
 At the start of a session, ask the user if they'd like to initialize CodeGraph:
 
-"I notice this project doesn't have CodeGraph initialized. Would you like me to run \`codegraph init -i\` to build a code knowledge graph?"
+"I notice this project doesn't have CodeGraph initialized. Would you like me to run \`codegraph-live init\` to build a code knowledge graph?"
 ${CODEGRAPH_SECTION_END}`;

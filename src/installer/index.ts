@@ -40,23 +40,110 @@ function getVersion(): string {
 }
 
 /**
- * Run the interactive setup for the current project.
- * Always writes local config (./.claude/) since the user ran this
- * from inside the project they want to initialize.
+ * Run the one-time global system installer (codegraph-live install).
+ *
+ * Writes to ~/.claude/ (global):
+ *   - ~/.claude.json          MCP server registration
+ *   - ~/.claude/settings.json permissions + hooks
+ *   - ~/.claude/CLAUDE.md     CodeGraph usage instructions for all projects
+ *
+ * Then optionally initializes the current directory as a project.
  */
-export async function runInstaller(): Promise<void> {
+export async function runGlobalInstaller(): Promise<void> {
   const clack = await importESM('@clack/prompts');
 
-  clack.intro(`CodeGraph Live v${getVersion()}`);
-  clack.log.info(`Setting up ${process.cwd()}`);
+  clack.intro(`CodeGraph Live v${getVersion()} — Global Setup`);
+  clack.log.info('Writing global Claude Code configuration (~/.claude/)');
 
-  // Write local Claude Code config (MCP server, hooks, permissions, CLAUDE.md)
-  writeConfigs(clack, 'local', true);
+  // Write global config (MCP, permissions, hooks, CLAUDE.md → ~/.claude/)
+  writeConfigs(clack, 'global', true);
+
+  // Offer to initialize current directory if it isn't already
+  const projectPath = process.cwd();
+  let CodeGraph: typeof import('../index').default | undefined;
+  try {
+    CodeGraph = (await import('../index')).default;
+  } catch {
+    // Native modules unavailable — skip project init offer
+  }
+
+  if (CodeGraph && !CodeGraph.isInitialized(projectPath)) {
+    const clackModule = await importESM('@clack/prompts');
+    const shouldInit = await clackModule.confirm({
+      message: `Initialize CodeGraph in the current directory? (${projectPath})`,
+      initialValue: true,
+    });
+
+    if (clackModule.isCancel(shouldInit) || !shouldInit) {
+      clack.log.info(`Skipped. Run \`codegraph-live init\` inside any project later.`);
+    } else {
+      await initializeLocalProject(clack);
+    }
+  } else if (CodeGraph?.isInitialized(projectPath)) {
+    clack.log.info('Current directory already has CodeGraph initialized.');
+  }
+
+  clack.outro('Done! Restart Claude Code to activate CodeGraph.');
+}
+
+/**
+ * Run the per-project initializer (codegraph-live init [path]).
+ *
+ * Writes to ./.claude/ (local):
+ *   - .claude.json            MCP server registration
+ *   - .claude/settings.json   permissions + hooks
+ *
+ * Then indexes the project (creates .codegraph/).
+ * Does NOT write CLAUDE.md — that belongs globally in ~/.claude/CLAUDE.md.
+ */
+export async function runProjectInit(projectPath: string): Promise<void> {
+  const clack = await importESM('@clack/prompts');
+
+  clack.intro(`CodeGraph Live v${getVersion()} — Project Init`);
+  clack.log.info(`Setting up ${projectPath}`);
+
+  // Write local MCP + hooks only (no CLAUDE.md — global installer handles that)
+  const locationLabel = './.claude';
+
+  const mcpAction = hasMcpConfig('local') ? 'Updated' : 'Added';
+  writeMcpConfig('local');
+  clack.log.success(`${mcpAction} MCP server in ${locationLabel}.json`);
+
+  const permAction = hasPermissions('local') ? 'Updated' : 'Added';
+  writePermissions('local');
+  clack.log.success(`${permAction} permissions in ${locationLabel}/settings.json`);
+
+  const hookAction = hasHooks('local') ? 'Updated' : 'Added';
+  writeHooks('local');
+  clack.log.success(`${hookAction} auto-sync hooks in ${locationLabel}/settings.json`);
 
   // Index the project
-  await initializeLocalProject(clack);
+  let CodeGraph: typeof import('../index').default;
+  try {
+    CodeGraph = (await import('../index')).default;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    clack.log.error(`Could not load native modules: ${msg}`);
+    clack.log.info('Skipping project indexing. Run "codegraph-live reindex" later.');
+    clack.outro('Partial setup complete.');
+    return;
+  }
 
-  clack.outro('Done! Restart Claude Code to activate the graph.');
+  if (CodeGraph.isInitialized(projectPath)) {
+    clack.log.info('CodeGraph already initialized in this project — skipping index.');
+  } else {
+    // Temporarily set cwd for initializeLocalProject (it uses process.cwd())
+    const originalCwd = process.cwd();
+    if (projectPath !== originalCwd) {
+      process.chdir(projectPath);
+    }
+    await initializeLocalProject(clack);
+    if (projectPath !== originalCwd) {
+      process.chdir(originalCwd);
+    }
+  }
+
+  clack.outro('Done! The daemon will keep the graph up to date automatically.');
 }
 
 /**
